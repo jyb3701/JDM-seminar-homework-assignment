@@ -1,0 +1,183 @@
+---
+title: "JDM Week2 Assignment"
+author: "Jiaqi Yu"
+date: "1/17/2021"
+output:
+  prettydoc::html_pretty:
+    theme: tactile
+    highlight: github
+  word_document: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#Load all the packages
+library(lme4)
+library(broom)
+library(purrr)
+library("mediation")
+library("scales") # For "percent" function
+#library("plyr") # For "count" function
+library("foreign")
+library("reshape2")
+library("ggplot2")
+library("tidyverse")
+library("stargazer")
+library(reshape2)
+library(dplyr)
+library(knitr)# for making a table from regression output
+library("psych") #for "describe.by"
+library(car)       # Companion to applied regression 
+library(jtools) # for summ function
+library(haven)
+library(readr)
+library(base)
+library(RColorBrewer)# for coloring graphs
+library(magrittr)
+library(qwraps2)
+options(qwraps2_markup = "markdown")
+
+#Read data 
+mydata_A <- read_csv("RECRUITER_A 2018autumn.csv")
+
+mydata_B <- read_csv("RECRUITER_B 2018autumn.csv")
+```
+
+### Recruiter A 
+#### Run main effect simple models for each of the independent variables
+```{r,echo=FALSE}
+#explore main effect of each variable
+lm1<-lm(RATING~INTRVW, data = mydata_A)#p<.001
+summary(lm1)
+lm2<-lm(RATING~RECS, data = mydata_A)#n.s
+summary(lm2)
+lm3<-lm(RATING~SCHOOL, data = mydata_A)#p<.01
+summary(lm3)
+lm4<-lm(RATING~EXPRNC, data = mydata_A)#n.s
+summary(lm4)
+lm5<-lm(RATING~AGE, data = mydata_A)#n.s
+summary(lm5)
+lm6<-lm(RATING~SEX, data = mydata_A)#n.s
+summary(lm6)
+lm7<-lm(RATING~ATTRACT, data = mydata_A)#n.s
+summary(lm7)
+
+
+#include the significant terms
+lm8<-lm(RATING~INTRVW+SCHOOL, data = mydata_A)
+summary(lm8)
+#adjusted R-square = 0.2688
+#no other significant predictors found
+
+```
+
+#### Draw the residual plot for recruiter A
+```{r,echo=FALSE}
+lm8.res = resid(lm8)
+
+plot(mydata_A$RATING, lm8.res, 
+   ylab="Residuals", xlab="", 
+    main="Residual Plot for Recruiter A") 
+abline(0, 0)                  
+```
+
+##### It seems that the residual is still positively correlated with the DV so the model did not capture the policy of recruiter A well.
+
+#### Draw graphs for each of the variables in the current model for recruiter A
+```{r,echo=FALSE}
+#X is interview impression
+plot(mydata_A$RATING, mydata_A$INTRVW, 
+   ylab="", xlab="", 
+    main="Interview impression (X) and Hireability rating (Y) Recruiter A") 
+abline(0, 0) 
+#linear relationship between impression and rating of hireability
+
+#X is school ranking
+plot(mydata_A$RATING, mydata_A$SCHOOL, 
+   ylab="", xlab="", 
+    main="School ranking (X) and Hireability rating (Y) Recruiter A") 
+abline(0, 0) 
+#seems that the relationship between hireability rating and school ranking is nonlinear.
+```
+
+#### Add  a quadratic term of school in model lm8 ---now model 9
+```{r,echo=FALSE}
+mydata_A$SCHOOL_2<-mydata_A$SCHOOL*mydata_A$SCHOOL
+lm9<-lm(RATING~INTRVW+SCHOOL+SCHOOL_2, data = mydata_A)
+summary(lm9)
+#adjusted R-square = 0.4704, quadratic term is significant
+```
+
+#### Draw the residual plot again to check for correlations
+```{r,echo=FALSE}
+lm9.res = resid(lm9)
+
+plot(mydata_A$RATING, lm9.res, 
+   ylab="Residuals", xlab="", 
+    main="Residual Plot for Recruiter A") 
+abline(0, 0)  
+```
+
+#### The positive relationship has been weakened
+
+##### Recruiter A only considers impressions in the interviews and school ranking when making hireability ratings. Demographics factors were not considered by recruiter A. Specifically, every score increase in the interview impression score will increase the hireability rating by 4.31 points, holding school ranking constant. In addition, every score increase in school ranking will increase the hireability rating by 0.20 points, holding interview impression score constant.In addition, the quadratic term is negative, suggesting that the influence of school ranking decreases as school ranking increases, holding interview impression constant.
+
+### Recruiter B
+#### Run main effect simple models for each of the independent variables
+```{r,echo=FALSE}
+#explore main effect of each variable
+lm1<-lm(RATING~INTRVW, data = mydata_B)#p<.001
+summary(lm1)
+lm2<-lm(RATING~RECS, data = mydata_B)#p<.05
+summary(lm2)
+lm3<-lm(RATING~SCHOOL, data = mydata_B)
+summary(lm3)
+lm4<-lm(RATING~EXPRNC, data = mydata_B)
+summary(lm4)
+lm5<-lm(RATING~AGE, data = mydata_B)
+summary(lm5)
+lm6<-lm(RATING~SEX, data = mydata_B)
+summary(lm6)
+lm7<-lm(RATING~ATTRACT, data = mydata_B)#p<.05
+summary(lm7)
+
+#include the significant terms
+lm8<-lm(RATING~INTRVW+RECS+ATTRACT, data = mydata_B)
+summary(lm8)
+#adjusted R-square = 0.247, attract not significant
+
+lm9<-lm(RATING~INTRVW+RECS, data = mydata_B)
+summary(lm9)
+#adjusted R-square = 0.2346, attract not significant
+
+#test for interactions between attract and other terms
+lm10<-lm(RATING~ATTRACT*SEX, data = mydata_B)
+summary(lm10)
+#significant interaction between sex and attract
+
+
+#bring the interaction term into the equation
+lm11<-lm(RATING~INTRVW+RECS+ATTRACT*SEX, data = mydata_B)
+summary(lm11)
+##adjusted R-square = 0.4244
+```
+
+#### Draw the residual plot for recruiter B
+```{r,echo=FALSE}
+lm11.res = resid(lm11)
+
+plot(mydata_A$RATING, lm11.res, 
+   ylab="Residuals", xlab="", 
+    main="Residual Plot for Recruiter B") 
+abline(0, 0)                  
+```
+
+##### It seems that the residual is not correlated than the DV so the model captured the policy of recruiter B well.
+
+##### Recruiter B considers impressions in the interviews, “temperature” of the letters of recommendation, the applicant's sex, and the interaction between sex and overall physical attraction (meaning that physical attraction depends on the applicant's sex) when rating an applicant's hireability. Specifically, every score increase in nterview impression will increase the hireability score by 3.27, holding other factors in the model constant; each score increase in the “temperature” of the letters of recommendation will increase the hireability score by 0.18, holding other factors constant; being male (compared to being female) increases the hireability score by 20.45, holding other factors constant; the estimated difference in the influence of physical attractiveness on hireability score for males (compared to females) is -4.32. To put in other words, being male increaseS the negative influence of being attractive on one’s hireability score.
+
+##### Overall, based on adjusted R-squares, both the models for recruiter A and recruiter B captured the policy moderately well and the model for recruiter B captures the policy better than the model for recruiter A, since the residual still has a positive correlation with the DV in recruiter A's model. Compared to recruiter A, recruiter B has strong biases (or habits) in considering the applicant's sex and physical attractiveness and also weighs the temperature of the recommendation letters to a certain extent. This may has something to do with B's personaility (being extroverted and risk-seeking). Compared to recruiter B, recruiter A seems more conservative in her evaluation, in that she only considers school rankings and impressions during interviews. This may has something to do with A's experience as adviser at a public school and relatively conservative lifestyle (which can be told from her preference for staying in a 9-5 job). The two recruiters' strategies overlap in that they both value interview impressions a lot.
+
+##### I think the corresponding Cognitive  Algebra  Model in this case is averaging, since 1) there are observed (or perhaps even unobserved) interactions between different variables in the regression models that would create a "crossing" pattern if we illustrate the variables and the DV on a figure like figure 2.5 in the book (for recruiter B's model--the interaction between sex and attractiveness) and 2) the models seem to align with a weighted averaging rule and has a weight parameter in its operation. The averaging rule tells us that each bit of information has two important qualities, weight and value. The value of a bit of information is its evaluation (favorable or unfavorable) and the weight is the information’s perceived importance.
+
+##### In a general sense, the model can be used to predict how likely an applicant will get hired based on hireability scores. If I have done a more realistic analysis with more cues and better-fitting models, the predicted scores should have a strong correlation with the actual hireabilty scores. This model can help applicants themselves not only in predicting but also in improving their chances of being hired. For example, if the model has a good-fit and shows that a recruiter only cares about school rankings and interview impressions, then the applicant should try to get into a good MBA program and spend a lot of time in preparing for interviews.
